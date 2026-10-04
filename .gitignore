@@ -1,3 +1,7 @@
 node_modules/
 .env
 firstvm.pem
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
