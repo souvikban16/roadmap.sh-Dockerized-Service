@@ -9,8 +9,8 @@ const port = Number(process.env.PORT) || 3000;
 // const secretMessage = process.env.SECRET_MESSAGE || 'You reached the secret route';
 
 
-const username = process.env.USER || process.env.BASIC_AUTH_USER;
-const password = process.env.PASSWORD || process.env.BASIC_AUTH_PASSWORD;
+const username = process.env.BASIC_AUTH_USERNAME;
+const password = process.env.PASSWORD;
 const secretMessage = process.env.SECRET_MESSAGE;
 
 app.get('/', (req, res) => {
@@ -25,6 +25,13 @@ app.get(
   }),
   (req, res) => {
     res.send(secretMessage);
+  },
+);
+
+app.get(
+  '/validate',
+  (req, res) => {
+    res.send(username + password);
   },
 );
 
