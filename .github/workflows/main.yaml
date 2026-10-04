@@ -1,0 +1,78 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy service on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          APP_ENV_FILE: ${{ secrets.APP_ENV_FILE }}
+        run: |
+          set -Eeuo pipefail
+
+          test -n "$EC2_HOST"
+          test -n "$EC2_USERNAME"
+          test -n "$EC2_SSH_PRIVATE_KEY"
+          test -n "$EC2_KNOWN_HOSTS"
+          test -n "$APP_ENV_FILE"
+
+          install -m 700 -d "$HOME/.ssh"
+          install -m 600 /dev/null "$HOME/.ssh/ec2_deploy_key"
+          printf '%s\n' "$EC2_SSH_PRIVATE_KEY" > "$HOME/.ssh/ec2_deploy_key"
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          printf '%s\n' "$APP_ENV_FILE" > "$env_file"
+
+          ssh_opts=(-i "$HOME/.ssh/ec2_deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          scp "${ssh_opts[@]}" "$env_file" "$EC2_USERNAME@$EC2_HOST:/tmp/dockerized-service.env"
+
+          ssh "${ssh_opts[@]}" "$EC2_USERNAME@$EC2_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+
+          if command -v dnf >/dev/null 2>&1; then
+            sudo dnf install -y docker git
+          elif command -v yum >/dev/null 2>&1; then
+            sudo yum install -y docker git
+          else
+            echo "Unsupported OS: expected Amazon Linux with dnf or yum." >&2
+            exit 1
+          fi
+
+          sudo systemctl enable --now docker
+
+          repo_dir="$HOME/roadmap.sh-Dockerized-Service"
+          if [ -d "$repo_dir/.git" ]; then
+            git -C "$repo_dir" fetch origin main
+            git -C "$repo_dir" reset --hard origin/main
+          else
+            git clone --branch main --depth 1 https://github.com/souvikban16/roadmap.sh-Dockerized-Service.git "$repo_dir"
+          fi
+
+          cd "$repo_dir"
+          sudo install -m 600 /tmp/dockerized-service.env "$repo_dir/.env"
+          rm -f /tmp/dockerized-service.env
+          sudo docker build -t dockerized-service:latest .
+          sudo docker rm -f dockerized-service >/dev/null 2>&1 || true
+          sudo docker run -d \
+            --name dockerized-service \
+            --restart unless-stopped \
+            -p 3000:3000 \
+            --env-file "$repo_dir/.env" \
+            dockerized-service:latest
+          REMOTE

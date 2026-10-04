@@ -28,13 +28,6 @@ app.get(
   },
 );
 
-app.get(
-  '/validate',
-  (req, res) => {
-    res.send(username + password);
-  },
-);
-
 app.listen(port, () => {
   console.log(`Service listening on port ${port}`);
 });
