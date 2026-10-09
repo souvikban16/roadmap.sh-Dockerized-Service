@@ -14,7 +14,7 @@ const password = process.env.PASSWORD;
 const secretMessage = process.env.SECRET_MESSAGE;
 
 app.get('/', (req, res) => {
-  res.send('Service is running');
+  res.send('Hello, world!');
 });
 
 app.get(
