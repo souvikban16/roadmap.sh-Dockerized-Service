@@ -48,7 +48,7 @@ resource "aws_instance" "app" {
     Name = var.instance_name
   }
 
-  vpc_security_group_ids = [aws_security_group.ssh-sg.id]
+  vpc_security_group_ids = [aws_security_group.ssh-sg.id, aws_security_group.app-3000.id]
 }
 
 resource "aws_key_pair" "local_key" {
@@ -64,8 +64,25 @@ resource "aws_security_group" "ssh-sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.ssh_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
+resource "aws_security_group" "app-3000" {
+  name        = "app-3000"
+  description = "security group for incoming ssh requests"
+
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
