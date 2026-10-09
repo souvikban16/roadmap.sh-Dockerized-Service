@@ -38,6 +38,7 @@ resource "aws_instance" "app" {
   ami                         = data.aws_ami.amazon_linux.id
   instance_type               = var.instance_type
   associate_public_ip_address = true
+  key_name                    = aws_key_pair.local_key.key_name
 
   metadata_options {
     http_tokens = "required"
@@ -46,4 +47,25 @@ resource "aws_instance" "app" {
   tags = {
     Name = var.instance_name
   }
+
+  vpc_security_group_ids = [aws_security_group.ssh-sg.id]
 }
+
+resource "aws_key_pair" "local_key" {
+  key_name   = "my-local-key"
+  public_key = file("${path.module}/../firstvm.pub")
+}
+
+resource "aws_security_group" "ssh-sg" {
+  name        = "ssh-sg"
+  description = "security group for incoming ssh requests"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.ssh_cidr]
+  }
+}
+
+

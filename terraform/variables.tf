@@ -21,3 +21,8 @@ variable "instance_name" {
   type        = string
   default     = "dockerized-service"
 }
+
+variable "ssh_cidr" {
+  description = "Trusted IPv4 CIDR allowed to connect over SSH."
+  type        = string
+}

@@ -5,3 +5,4 @@ firstvm.pem
 *.tfstate
 *.tfstate.*
 terraform.tfvars
+*.pub
